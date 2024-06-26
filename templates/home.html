@@ -130,7 +130,7 @@
 
         async function checkDownloadSpeed() {
             const startTime = Date.now();
-            const fileSize = 5242880 //2097184  // Bytes
+            const fileSize = 104857621 //2097184  // Bytes
             let speed = 0;
 
             await fetch('/lightspeed/check-download')
@@ -150,7 +150,7 @@
         }
 
         async function checkUploadSpeed() {
-            filesize = 2000000
+            filesize = 104857621
             const file = new Blob([new Uint8Array(filesize)], { type: 'application/octet-stream' });
             const startTime = Date.now();
             let speed = 0;
@@ -229,8 +229,6 @@
             const downloadSpeeds = recentData.map(item => item.download_speed);
             const uploadSpeeds = recentData.map(item => item.upload_speed);
             const latencies = recentData.map(item => item.latency);
-
-            console.log(downloadSpeeds, uploadSpeeds, latencies)
 
             const modal = document.createElement("div");
             modal.classList.add("modal");

@@ -28,21 +28,20 @@ class OpenSpeedTest(View):
     def get(self, request):
         return render(request, 'check_speed.html')    
 
-@api_view(['GET'])
-def download_test(request):
-    file_path = os.path.join('media', 'test5mb.txt')
-    try:
-        file = open(file_path, 'rb')
-        response = FileResponse(file, as_attachment=True, filename='test5mb.txt')
-        return response
-    except FileNotFoundError:
-        return Response(status=404, data={'error': 'File not found'})
+class DownloadSpeed(GenericAPIView):
+    def get(self, request):
+        file_path = os.path.join('media', 'test100mb.txt')
+        try:
+            file = open(file_path, 'rb')
+            response = FileResponse(file, as_attachment=True, filename='test100msb.txt')
+            return response
+        except FileNotFoundError:
+            return Response(status=404, data={'error': 'File not found'})
 
-
-@api_view(['POST'])
-def upload_test(request):
-    return Response({'status': 200,
-            'message': 'upload success'})
+class UploadSpeed(GenericAPIView):
+    def post(self, request):
+        return Response({'status': 200,
+                'message': 'upload success'})
 
 class UserInternetSpeed(ListCreateAPIView):
     queryset = UserInternetSpeedData.objects.all()
