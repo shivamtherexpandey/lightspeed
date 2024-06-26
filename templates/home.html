@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LightSpeed</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body,
+        html {
+            height: 100%;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 10;
+        }
+
+        .graph-container {
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container main-container">
+        <div class="card" id="emailCard">
+            <div class="card-header">
+                Welcome
+            </div>
+            <div class="card-body">
+                <form id="emailForm">
+                    <div class="form-group">
+                        <label for="email">Email address</label>
+                        <input type="email" class="form-control" id="email" placeholder="Enter email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+
+        let email = null, download_speed = null, upload_speed = null, latency = null;
+
+        $(document).ready(function () {
+            $('#emailForm').on('submit', function (event) {
+                event.preventDefault();
+                email = $('#email').val();
+                $('#email').val('');
+                $('#emailCard').remove();
+                console.log(email);
+                addButtonsCard()
+            });
+        });
+
+        function addButtonsCard() {
+            const buttonsCard = `
+                <div class="card">
+                    <div class="card-body">
+                        <div id="checking-status"></div>
+                        <div class="empty-card-content mb-3"></div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id='check' onclick='checkInternetSpeed()'>Check</button>
+                            <button class="btn btn-secondary" id='save' onclick='SaveUserData()' disabled>Save</button>
+                            <button class="btn btn-success" id='show' onclick='ShowUserData()'>Show</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('.main-container').prepend(buttonsCard); // Add the new card before the user details card
+        }
+
+        function EnableSaveButton() {
+            const savebutton = $("#save")[0];
+            savebutton.disabled = false;
+        }
+
+        function DisableSaveButton() {
+            const savebutton = $("#save")[0];
+            savebutton.disabled = true;
+        }
+
+        async function checkInternetSpeed() {
+            const checkingStatus = $('#checking-status')[0];
+
+            try {
+                checkingStatus.textContent = 'Checking Download Speed...';
+                download_speed = await checkDownloadSpeed();
+
+                checkingStatus.textContent = 'Checking Upload Speed...';
+                upload_speed = await checkUploadSpeed();
+
+                checkingStatus.textContent = 'Checking Latency...';
+                latency = await checkLatency();
+
+                checkingStatus.textContent = 'Internet Speed Check Completed!';
+
+                checkingStatus.innerHTML = ` <strong>Download Speed</strong> (Mbps): ${download_speed} <br> <strong>Upload Speed</strong> (Mbps): ${upload_speed} <br> <strong>Latency</strong> (ms): ${latency} `;
+                EnableSaveButton()
+            } catch (error) {
+                checkingStatus.textContent = 'Error: ' + error.message;
+                alert('Too many requests! Try after some time.');
+            }
+        }
+
+        async function checkDownloadSpeed() {
+            const startTime = Date.now();
+            const fileSize = 5242880 //2097184  // Bytes
+            let speed = 0;
+
+            await fetch('/lightspeed/check-download')
+                .then(response => response.blob())
+                .then(blob => {
+                    const endTime = Date.now();
+                    const duration = (endTime - startTime) / 1000;
+                    console.log(fileSize / duration);
+                    speed = ((fileSize * 8 / (1000 * 1000)) / duration);
+                    console.log(`Download Speed: ${speed.toFixed(2)} Mbps`);
+                })
+                .catch((error) => {
+                    console.error('Error measuring download speed:', error);
+                });
+
+            return speed.toFixed(2)
+        }
+
+        async function checkUploadSpeed() {
+            filesize = 2000000
+            const file = new Blob([new Uint8Array(filesize)], { type: 'application/octet-stream' });
+            const startTime = Date.now();
+            let speed = 0;
+
+            await fetch('/lightspeed/check-upload', {
+                method: 'POST',
+                body: file
+            }).then(response => response.text())
+                .then(() => {
+                    const endTime = Date.now();
+                    const duration = (endTime - startTime) / 1000;
+                    console.log(file.size / duration);
+                    speed = ((file.size * 8 / (1000 * 1000)) / duration);
+                    console.log(`Upload Speed: ${speed.toFixed(2)} Mbps`);
+                })
+                .catch((error) => {
+                    console.error('Error measuring upload speed:', error);
+                });
+
+            return speed.toFixed(2)
+        }
+
+        async function checkLatency() {
+            const startTime = Date.now();
+            let latency = 0
+            await fetch('/lightspeed/ping')
+                .then(() => {
+                    const endTime = Date.now();
+                    latency = endTime - startTime;
+                    console.log(`Latency: ${latency} ms`);
+                })
+                .catch((error) => {
+                    console.error('Error measuring latency:', error);
+                });
+
+            return latency
+        }
+
+        async function ShowUserData() {
+
+            if (!email) {
+                alert('invalid request.')
+                return;
+            }
+
+            const url = `/lightspeed/internet-speed-details?email=${encodeURIComponent(email)}`;
+            let result = null;
+            await fetch(url)
+                .then(response => {
+                    if (response.status === 200) {
+                        data = response.json();
+
+                        result = data;
+
+                        return
+                    } else {
+                        alert('Failed to save internet speed details.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while fetching internet speed details.');
+                });
+
+            result = await result;
+            analyzeSpeedData(result);
+        }
+
+        function analyzeSpeedData(data) {
+            if (data.length === 0) {
+                alert("No speed data found!");
+                return;
+            }
+            const recentData = data.slice(-7);
+
+            const downloadSpeeds = recentData.map(item => item.download_speed);
+            const uploadSpeeds = recentData.map(item => item.upload_speed);
+            const latencies = recentData.map(item => item.latency);
+
+            console.log(downloadSpeeds, uploadSpeeds, latencies)
+
+            const modal = document.createElement("div");
+            modal.classList.add("modal");
+
+            const modal_dialog = document.createElement("div");
+            modal_dialog.classList.add("modal-dialog");
+
+            modal.appendChild(modal_dialog);
+
+            const modal_content = document.createElement("div");
+            modal_content.classList.add("modal-content");
+
+            modal_dialog.appendChild(modal_content);
+
+            const modal_body = document.createElement("div");
+            modal_body.classList.add("modal-body");
+
+            modal_content.appendChild(modal_body);
+
+            const graphContainer = document.createElement("div");
+            graphContainer.classList.add("graph-container");
+
+            // Download Speed Graph
+            const downloadCanvas = document.createElement("canvas");
+            const downloadCtx = downloadCanvas.getContext("2d");
+            new Chart(downloadCtx, {
+                type: 'line',
+                data: {
+                    labels: recentData.map(item => item.id),
+                    datasets: [{
+                        label: 'Download Speed (Mbps)',
+                        data: downloadSpeeds,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxis: {
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Upload Speed Graph (similar structure as download speed graph)
+            const uploadCanvas = document.createElement("canvas");
+            const uploadCtx = uploadCanvas.getContext("2d");
+            new Chart(uploadCtx, {
+                type: 'line',
+                data: {
+                    labels: recentData.map(item => item.id),
+                    datasets: [{
+                        label: 'Upload Speed (Mbps)',
+                        data: uploadSpeeds,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxis: {
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                }
+            });
+
+
+            // Latency Graph (similar structure as download speed graph)
+            const latencyCanvas = document.createElement("canvas");
+            const latencyCtx = latencyCanvas.getContext("2d");
+            new Chart(latencyCtx, {
+                type: 'line',
+                data: {
+                    labels: recentData.map(item => item.id),
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: latencies,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxis: {
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                }
+            });
+
+            graphContainer.appendChild(downloadCanvas);
+            graphContainer.appendChild(uploadCanvas);
+            graphContainer.appendChild(latencyCanvas);
+
+            const modal_footer = document.createElement("div");
+            modal_footer.classList.add("modal-footer");
+
+            modal_body.appendChild(graphContainer);
+            const closeButton = document.createElement("button");
+            closeButton.textContent = "Close";
+            closeButton.classList.add("btn", "btn-danger");
+            closeButton.addEventListener("click", () => modal.remove());
+            modal_footer.appendChild(closeButton);
+
+            modal_content.appendChild(modal_footer);
+
+            document.body.appendChild(modal);
+
+            modal.style.display = "block";
+
+        }
+
+
+        async function SaveUserData() {
+            if (!email) {
+                alert('Email not set, Refresh the page.');
+                return false;
+            }
+
+            if (!download_speed | !upload_speed | !latency) {
+                alert("Kindly click on check button first.")
+                return false;
+            }
+
+            const url = `/lightspeed/internet-speed-details`;
+            data = {
+                'email': email,
+                'download_speed': download_speed,
+                'upload_speed': upload_speed,
+                'latency': latency,
+            }
+            await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (response.status === 201) {
+                        alert('Internet speed details saved successfully!');
+                    } else {
+                        alert('Failed to save internet speed details.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while fetching internet speed details.');
+                });
+            download_speed = null;
+            upload_speed = null;
+            latency = null;
+            DisableSaveButton();
+        }
+
+    </script>
+</body>
+
+</html>
