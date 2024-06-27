@@ -106,14 +106,28 @@
         }
 
         async function checkInternetSpeed() {
+            DisableSaveButton();
             const checkingStatus = $('#checking-status')[0];
 
             try {
+
+                // const [uploadSpeed, downloadSpeed, latency] = await Promise.all([
+                //     checkDownloadSpeed(),
+                //     checkUploadSpeed(),
+                //     checkLatency()
+                // ]);
+
+                // checkingStatus.textContent = `Upload Speed: ${uploadSpeed} Mbps, Download Speed: ${downloadSpeed} Mbps, Latency: ${latency} ms`;
+                
                 checkingStatus.textContent = 'Checking Download Speed...';
                 download_speed = await checkDownloadSpeed();
 
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
                 checkingStatus.textContent = 'Checking Upload Speed...';
                 upload_speed = await checkUploadSpeed();
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 checkingStatus.textContent = 'Checking Latency...';
                 latency = await checkLatency();
@@ -121,6 +135,7 @@
                 checkingStatus.textContent = 'Internet Speed Check Completed!';
 
                 checkingStatus.innerHTML = ` <strong>Download Speed</strong> (Mbps): ${download_speed} <br> <strong>Upload Speed</strong> (Mbps): ${upload_speed} <br> <strong>Latency</strong> (ms): ${latency} `;
+
                 EnableSaveButton()
             } catch (error) {
                 checkingStatus.textContent = 'Error: ' + error.message;
@@ -129,46 +144,48 @@
         }
 
         async function checkDownloadSpeed() {
-            const startTime = Date.now();
-            const fileSize = 104857621 //2097184  // Bytes
+            // const fileSize = 1024 * 1024 * 100 //2097184  // Bytes
             let speed = 0;
 
-            await fetch('/lightspeed/check-download')
-                .then(response => response.blob())
-                .then(blob => {
-                    const endTime = Date.now();
-                    const duration = (endTime - startTime) / 1000;
-                    console.log(fileSize / duration);
-                    speed = ((fileSize * 8 / (1000 * 1000)) / duration);
-                    console.log(`Download Speed: ${speed.toFixed(2)} Mbps`);
-                })
-                .catch((error) => {
-                    console.error('Error measuring download speed:', error);
-                });
+            const startTime = Date.now();
 
-            return speed.toFixed(2)
+            const response = await fetch('/lightspeed/check-download');
+            const data = await response.blob();
+
+            const endTime = Date.now();
+
+            const duration = (endTime - startTime) / 1000;
+
+            console.log('File Size: ' + data.size / (1000 * 1000));
+
+            const fileSize = data.size;
+            speed = ((fileSize * 8 / (1000 * 1000)) / duration);
+            console.log(`Download Speed: ${speed.toFixed(2)} Mbps`);
+
+            return speed.toFixed(2);
         }
 
         async function checkUploadSpeed() {
-            filesize = 104857621
+            filesize = 21408647 ; // Bytes
             const file = new Blob([new Uint8Array(filesize)], { type: 'application/octet-stream' });
-            const startTime = Date.now();
+            const formData = new FormData();
+            formData.append('file', file);
+
             let speed = 0;
 
-            await fetch('/lightspeed/check-upload', {
-                method: 'POST',
-                body: file
-            }).then(response => response.text())
-                .then(() => {
-                    const endTime = Date.now();
-                    const duration = (endTime - startTime) / 1000;
-                    console.log(file.size / duration);
-                    speed = ((file.size * 8 / (1000 * 1000)) / duration);
-                    console.log(`Upload Speed: ${speed.toFixed(2)} Mbps`);
-                })
-                .catch((error) => {
-                    console.error('Error measuring upload speed:', error);
-                });
+            const startTime = Date.now();
+
+            const response = await fetch('/lightspeed/check-upload', { method: 'POST', body: formData });
+
+            const endTime = Date.now();
+
+            const duration = (endTime - startTime) / 1000;
+
+            console.log('File Size: ' + file.size / (1000 * 1000));
+
+            const fileSize = file.size;
+            speed = (((fileSize * 8) / (1000 * 1000)) / duration);
+            console.log(`Upload Speed: ${speed.toFixed(2)} Mbps`);
 
             return speed.toFixed(2)
         }
@@ -229,6 +246,8 @@
             const downloadSpeeds = recentData.map(item => item.download_speed);
             const uploadSpeeds = recentData.map(item => item.upload_speed);
             const latencies = recentData.map(item => item.latency);
+
+            console.log(downloadSpeeds, uploadSpeeds, latencies)
 
             const modal = document.createElement("div");
             modal.classList.add("modal");
