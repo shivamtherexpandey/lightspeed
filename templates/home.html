@@ -86,7 +86,7 @@
                         <div class="empty-card-content mb-3"></div>
                         <div class="button-group">
                             <button class="btn btn-primary" id='check' onclick='checkInternetSpeed()'>Check</button>
-                            <button class="btn btn-secondary" id='save' onclick='SaveUserData()' disabled>Save</button>
+                            
                             <button class="btn btn-success" id='show' onclick='ShowUserData()'>Show</button>
                         </div>
                     </div>
@@ -106,7 +106,6 @@
         }
 
         async function checkInternetSpeed() {
-            DisableSaveButton();
             const checkingStatus = $('#checking-status')[0];
 
             try {
@@ -118,14 +117,28 @@
                 // ]);
 
                 // checkingStatus.textContent = `Upload Speed: ${uploadSpeed} Mbps, Download Speed: ${downloadSpeed} Mbps, Latency: ${latency} ms`;
-                
-                checkingStatus.textContent = 'Checking Download Speed...';
+
+                checkingStatus.innerHTML = `Checking Download Speed...<div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+                </div>`;
+
                 download_speed = await checkDownloadSpeed();
+
+                download_speed += await checkDownloadSpeed();
+
+                download_speed = download_speed / 2;
 
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
-                checkingStatus.textContent = 'Checking Upload Speed...';
+                checkingStatus.innerHTML = `Checking Upload Speed...
+                <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+                </div>`;
                 upload_speed = await checkUploadSpeed();
+
+                upload_speed += await checkUploadSpeed();
+
+                upload_speed = upload_speed / 2;
 
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -136,7 +149,8 @@
 
                 checkingStatus.innerHTML = ` <strong>Download Speed</strong> (Mbps): ${download_speed} <br> <strong>Upload Speed</strong> (Mbps): ${upload_speed} <br> <strong>Latency</strong> (ms): ${latency} `;
 
-                EnableSaveButton()
+                SaveUserData();
+                
             } catch (error) {
                 checkingStatus.textContent = 'Error: ' + error.message;
                 alert('Too many requests! Try after some time.');
@@ -162,11 +176,11 @@
             speed = ((fileSize * 8 / (1000 * 1000)) / duration);
             console.log(`Download Speed: ${speed.toFixed(2)} Mbps`);
 
-            return speed.toFixed(2);
+            return parseFloat(speed.toFixed(2));
         }
 
         async function checkUploadSpeed() {
-            filesize = 21408647 ; // Bytes
+            filesize = 21408647; // Bytes
             const file = new Blob([new Uint8Array(filesize)], { type: 'application/octet-stream' });
             const formData = new FormData();
             formData.append('file', file);
@@ -187,7 +201,7 @@
             speed = (((fileSize * 8) / (1000 * 1000)) / duration);
             console.log(`Upload Speed: ${speed.toFixed(2)} Mbps`);
 
-            return speed.toFixed(2)
+            return parseFloat(speed.toFixed(2));
         }
 
         async function checkLatency() {
@@ -203,7 +217,7 @@
                     console.error('Error measuring latency:', error);
                 });
 
-            return latency
+            return latency;
         }
 
         async function ShowUserData() {
@@ -253,7 +267,7 @@
             modal.classList.add("modal");
 
             const modal_dialog = document.createElement("div");
-            modal_dialog.classList.add("modal-dialog");
+            modal_dialog.classList.add("modal-dialog", "modal-lg");
 
             modal.appendChild(modal_dialog);
 
@@ -269,6 +283,12 @@
 
             const graphContainer = document.createElement("div");
             graphContainer.classList.add("graph-container");
+            
+            // const graphContainer2 = document.createElement("div");
+            // graphContainer2.classList.add("graph-container");
+
+            // const graphContainer3 = document.createElement("div");
+            // graphContainer3.classList.add("graph-container");
 
             // Download Speed Graph
             const downloadCanvas = document.createElement("canvas");
@@ -357,6 +377,8 @@
             modal_footer.classList.add("modal-footer");
 
             modal_body.appendChild(graphContainer);
+            // modal_body.appendChild(graphContainer2);
+            // modal_body.appendChild(graphContainer3);
             const closeButton = document.createElement("button");
             closeButton.textContent = "Close";
             closeButton.classList.add("btn", "btn-danger");
@@ -368,6 +390,8 @@
             document.body.appendChild(modal);
 
             modal.style.display = "block";
+            modal.style.overflow = 'hidden';
+            document.body.style.overflow = 'auto';
 
         }
 
