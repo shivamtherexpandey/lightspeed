@@ -105,8 +105,19 @@
             savebutton.disabled = true;
         }
 
+        function EnableShowButton() {
+            const showbutton = $("#show")[0];
+            showbutton.disabled = false;
+        }
+
+        function DisableShowButton() {
+            const showbutton = $("#show")[0];
+            showbutton.disabled = true;
+        }
+
         async function checkInternetSpeed() {
             const checkingStatus = $('#checking-status')[0];
+            DisableShowButton();
 
             try {
 
@@ -124,10 +135,6 @@
 
                 download_speed = await checkDownloadSpeed();
 
-                download_speed += await checkDownloadSpeed();
-
-                download_speed = download_speed / 2;
-
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                 checkingStatus.innerHTML = `Checking Upload Speed...
@@ -135,10 +142,6 @@
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                 </div>`;
                 upload_speed = await checkUploadSpeed();
-
-                upload_speed += await checkUploadSpeed();
-
-                upload_speed = upload_speed / 2;
 
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -150,6 +153,7 @@
                 checkingStatus.innerHTML = ` <strong>Download Speed</strong> (Mbps): ${download_speed} <br> <strong>Upload Speed</strong> (Mbps): ${upload_speed} <br> <strong>Latency</strong> (ms): ${latency} `;
 
                 SaveUserData();
+                EnableShowButton();
                 
             } catch (error) {
                 checkingStatus.textContent = 'Error: ' + error.message;
@@ -247,7 +251,8 @@
                 });
 
             result = await result;
-            analyzeSpeedData(result);
+            await analyzeSpeedData(result);
+
         }
 
         function analyzeSpeedData(data) {
